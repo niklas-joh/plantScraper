@@ -91,6 +91,9 @@ for i, row in df.head(1).iterrows():
                         h3_tags = child.find_all('h3')
                         
                         if h3_tags:  # If there are h3 tags, process content by sections
+                            # Get a copy of the field item to extract content before the first h3
+                            field_item_copy = child.prettify()
+                            
                             # Process content before the first h3 tag
                             first_h3 = h3_tags[0]
                             content_before_h3 = ""
@@ -106,120 +109,123 @@ for i, row in df.head(1).iterrows():
                                 else:
                                     plant_data[current_label]["content"] = content_before_h3.strip()
                             
-                        # Process each h3 and its content
-                        for i, h3 in enumerate(h3_tags):
-                            sub_heading = h3.get_text(strip=True)
-                            plant_data[current_label]["sub_headings"][sub_heading] = ""
-                            
-                            # Get content after this h3 and before the next h3 (if any)
-                            content_after_h3 = ""
-                            current_elem = h3.next_sibling
-                            
-                            # Check if this is the "Cooking Notes" section and we need to stop at "ADVERTISEMENT"
-                            if current_label == "Cooking Notes":
-                                # If this is the last h3, get all content after it until "ADVERTISEMENT"
-                                if i == len(h3_tags) - 1:
-                                    found_ad = False
-                                    while current_elem and not found_ad:
-                                        if isinstance(current_elem, Tag):
-                                            if current_elem.name != 'h3':  # Skip any nested h3
-                                                text_content = current_elem.get_text(separator=" ", strip=True)
-                                                if "ADVERTISEMENT" in text_content:
-                                                    # Stop at ADVERTISEMENT
-                                                    ad_index = text_content.find("ADVERTISEMENT")
-                                                    if ad_index > 0:
-                                                        content_after_h3 += " " + text_content[:ad_index].strip()
-                                                    found_ad = True
-                                                    break
-                                                else:
-                                                    content_after_h3 += " " + text_content
-                                        current_elem = current_elem.next_sibling
+                            # Process each h3 and its content
+                            for i, h3 in enumerate(h3_tags):
+                                sub_heading = h3.get_text(strip=True)
+                                plant_data[current_label]["sub_headings"][sub_heading] = ""
+                                
+                                # Get content after this h3 and before the next h3 (if any)
+                                content_after_h3 = ""
+                                current_elem = h3.next_sibling
+                                
+                                # Check if this is the "Cooking Notes" section and we need to stop at "ADVERTISEMENT"
+                                if current_label == "Cooking Notes":
+                                    # If this is the last h3, get all content after it until "ADVERTISEMENT"
+                                    if i == len(h3_tags) - 1:
+                                        found_ad = False
+                                        while current_elem and not found_ad:
+                                            if isinstance(current_elem, Tag):
+                                                if current_elem.name != 'h3':  # Skip any nested h3
+                                                    text_content = current_elem.get_text(separator=" ", strip=True)
+                                                    if "ADVERTISEMENT" in text_content:
+                                                        # Stop at ADVERTISEMENT
+                                                        ad_index = text_content.find("ADVERTISEMENT")
+                                                        if ad_index > 0:
+                                                            content_after_h3 += " " + text_content[:ad_index].strip()
+                                                        found_ad = True
+                                                        break
+                                                    else:
+                                                        content_after_h3 += " " + text_content
+                                            current_elem = current_elem.next_sibling
+                                    else:
+                                        # Get content until the next h3 or until "ADVERTISEMENT"
+                                        next_h3 = h3_tags[i + 1]
+                                        found_ad = False
+                                        while current_elem and current_elem != next_h3 and not found_ad:
+                                            if isinstance(current_elem, Tag):
+                                                if current_elem.name != 'h3':  # Skip any nested h3
+                                                    text_content = current_elem.get_text(separator=" ", strip=True)
+                                                    if "ADVERTISEMENT" in text_content:
+                                                        # Stop at ADVERTISEMENT
+                                                        ad_index = text_content.find("ADVERTISEMENT")
+                                                        if ad_index > 0:
+                                                            content_after_h3 += " " + text_content[:ad_index].strip()
+                                                        found_ad = True
+                                                        break
+                                                    else:
+                                                        content_after_h3 += " " + text_content
+                                            current_elem = current_elem.next_sibling
+                                # For Pests/Diseases section, check for tables and preserve them
+                                elif current_label == "Pests/Diseases":
+                                    # If this is the last h3, get all content after it
+                                    if i == len(h3_tags) - 1:
+                                        while current_elem:
+                                            if isinstance(current_elem, Tag):
+                                                if current_elem.name == 'table':
+                                                    # Process table structure
+                                                    table_data = []
+                                                    rows = current_elem.find_all('tr')
+                                                    for row in rows:
+                                                        row_data = []
+                                                        cells = row.find_all(['th', 'td'])
+                                                        for cell in cells:
+                                                            row_data.append(cell.get_text(strip=True))
+                                                        table_data.append(row_data)
+                                                    
+                                                    # Format table as text
+                                                    table_text = "\nTable:\n"
+                                                    for row in table_data:
+                                                        table_text += " | ".join(row) + "\n"
+                                                    content_after_h3 += table_text
+                                                elif current_elem.name != 'h3':  # Skip any nested h3
+                                                    content_after_h3 += " " + current_elem.get_text(separator=" ", strip=True)
+                                            current_elem = current_elem.next_sibling
+                                    else:
+                                        # Get content until the next h3
+                                        next_h3 = h3_tags[i + 1]
+                                        while current_elem and current_elem != next_h3:
+                                            if isinstance(current_elem, Tag):
+                                                if current_elem.name == 'table':
+                                                    # Process table structure
+                                                    table_data = []
+                                                    rows = current_elem.find_all('tr')
+                                                    for row in rows:
+                                                        row_data = []
+                                                        cells = row.find_all(['th', 'td'])
+                                                        for cell in cells:
+                                                            row_data.append(cell.get_text(strip=True))
+                                                        table_data.append(row_data)
+                                                    
+                                                    # Format table as text
+                                                    table_text = "\nTable:\n"
+                                                    for row in table_data:
+                                                        table_text += " | ".join(row) + "\n"
+                                                    content_after_h3 += table_text
+                                                elif current_elem.name != 'h3':  # Skip any nested h3
+                                                    content_after_h3 += " " + current_elem.get_text(separator=" ", strip=True)
+                                            current_elem = current_elem.next_sibling
                                 else:
-                                    # Get content until the next h3 or until "ADVERTISEMENT"
-                                    next_h3 = h3_tags[i + 1]
-                                    found_ad = False
-                                    while current_elem and current_elem != next_h3 and not found_ad:
-                                        if isinstance(current_elem, Tag):
-                                            if current_elem.name != 'h3':  # Skip any nested h3
-                                                text_content = current_elem.get_text(separator=" ", strip=True)
-                                                if "ADVERTISEMENT" in text_content:
-                                                    # Stop at ADVERTISEMENT
-                                                    ad_index = text_content.find("ADVERTISEMENT")
-                                                    if ad_index > 0:
-                                                        content_after_h3 += " " + text_content[:ad_index].strip()
-                                                    found_ad = True
-                                                    break
-                                                else:
-                                                    content_after_h3 += " " + text_content
-                                        current_elem = current_elem.next_sibling
-                            # For Pests/Diseases section, check for tables and preserve them
-                            elif current_label == "Pests/Diseases":
-                                # If this is the last h3, get all content after it
-                                if i == len(h3_tags) - 1:
-                                    while current_elem:
-                                        if isinstance(current_elem, Tag):
-                                            if current_elem.name == 'table':
-                                                # Process table structure
-                                                table_data = []
-                                                rows = current_elem.find_all('tr')
-                                                for row in rows:
-                                                    row_data = []
-                                                    cells = row.find_all(['th', 'td'])
-                                                    for cell in cells:
-                                                        row_data.append(cell.get_text(strip=True))
-                                                    table_data.append(row_data)
-                                                
-                                                # Format table as text
-                                                table_text = "\nTable:\n"
-                                                for row in table_data:
-                                                    table_text += " | ".join(row) + "\n"
-                                                content_after_h3 += table_text
-                                            elif current_elem.name != 'h3':  # Skip any nested h3
-                                                content_after_h3 += " " + current_elem.get_text(separator=" ", strip=True)
-                                        current_elem = current_elem.next_sibling
-                                else:
-                                    # Get content until the next h3
-                                    next_h3 = h3_tags[i + 1]
-                                    while current_elem and current_elem != next_h3:
-                                        if isinstance(current_elem, Tag):
-                                            if current_elem.name == 'table':
-                                                # Process table structure
-                                                table_data = []
-                                                rows = current_elem.find_all('tr')
-                                                for row in rows:
-                                                    row_data = []
-                                                    cells = row.find_all(['th', 'td'])
-                                                    for cell in cells:
-                                                        row_data.append(cell.get_text(strip=True))
-                                                    table_data.append(row_data)
-                                                
-                                                # Format table as text
-                                                table_text = "\nTable:\n"
-                                                for row in table_data:
-                                                    table_text += " | ".join(row) + "\n"
-                                                content_after_h3 += table_text
-                                            elif current_elem.name != 'h3':  # Skip any nested h3
-                                                content_after_h3 += " " + current_elem.get_text(separator=" ", strip=True)
-                                        current_elem = current_elem.next_sibling
-                            else:
-                                # Standard processing for other sections
-                                # If this is the last h3, get all content after it
-                                if i == len(h3_tags) - 1:
-                                    while current_elem:
-                                        if isinstance(current_elem, Tag):
-                                            if current_elem.name != 'h3':  # Skip any nested h3
-                                                content_after_h3 += " " + current_elem.get_text(separator=" ", strip=True)
-                                        current_elem = current_elem.next_sibling
-                                else:
-                                    # Get content until the next h3
-                                    next_h3 = h3_tags[i + 1]
-                                    while current_elem and current_elem != next_h3:
-                                        if isinstance(current_elem, Tag):
-                                            if current_elem.name != 'h3':  # Skip any nested h3
-                                                content_after_h3 += " " + current_elem.get_text(separator=" ", strip=True)
-                                        current_elem = current_elem.next_sibling
+                                    # Standard processing for other sections
+                                    # If this is the last h3, get all content after it
+                                    if i == len(h3_tags) - 1:
+                                        while current_elem:
+                                            if isinstance(current_elem, Tag):
+                                                if current_elem.name != 'h3':  # Skip any nested h3
+                                                    content_after_h3 += " " + current_elem.get_text(separator=" ", strip=True)
+                                            current_elem = current_elem.next_sibling
+                                    else:
+                                        # Get content until the next h3
+                                        next_h3 = h3_tags[i + 1]
+                                        while current_elem and current_elem != next_h3:
+                                            if isinstance(current_elem, Tag):
+                                                if current_elem.name != 'h3':  # Skip any nested h3
+                                                    content_after_h3 += " " + current_elem.get_text(separator=" ", strip=True)
+                                            current_elem = current_elem.next_sibling
+                                
+                                plant_data[current_label]["sub_headings"][sub_heading] = content_after_h3.strip()
                             
-                            plant_data[current_label]["sub_headings"][sub_heading] = content_after_h3.strip()
+                            # For sections with subheadings, don't add the entire content to the content field
+                            # This avoids duplication
                         else:
                             # No h3 tags, just add the content normally
                             content = child.get_text(separator=" ", strip=True)
@@ -251,6 +257,39 @@ for i, row in df.head(1).iterrows():
                 
                 # If there are sub-headings, keep the structured format
                 if value["sub_headings"]:
+                    # For sections with subheadings, we need to extract the content that's not in subheadings
+                    
+                    # First, get all the content from the field item
+                    original_content = value["content"]
+                    
+                    # Check if the content is duplicated in the subheadings
+                    # We'll use a more careful approach to avoid losing unique content
+                    
+                    # Extract all paragraphs from the content
+                    paragraphs = original_content.split("\n")
+                    
+                    # Keep track of which paragraphs are duplicated in subheadings
+                    duplicate_paragraphs = set()
+                    
+                    # Check each paragraph against each subheading content
+                    for i, paragraph in enumerate(paragraphs):
+                        for sub_heading, sub_content in value["sub_headings"].items():
+                            # If the paragraph is in the subheading content, mark it as duplicate
+                            if paragraph.strip() and paragraph.strip() in sub_content:
+                                duplicate_paragraphs.add(i)
+                    
+                    # Build new content with only non-duplicate paragraphs
+                    new_paragraphs = []
+                    for i, paragraph in enumerate(paragraphs):
+                        if i not in duplicate_paragraphs and paragraph.strip():
+                            new_paragraphs.append(paragraph)
+                    
+                    # If we have any non-duplicate paragraphs, join them back together
+                    if new_paragraphs:
+                        value["content"] = "\n".join(new_paragraphs)
+                    else:
+                        value["content"] = None
+                        
                     processed_plant_data[key] = value
                 else:
                     # If no sub-headings, just use the content directly
