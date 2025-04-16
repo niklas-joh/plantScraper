@@ -1,0 +1,10 @@
+# This project uses only Python built-in libraries:
+# - urllib.request (HTTP requests)
+# - html.parser (HTML parsing)
+# - csv (CSV file handling)
+# - json (JSON operations)
+# - time (time-related functions)
+# - os (operating system operations)
+# - ssl (SSL/TLS support)
+#
+# No external packages need to be installed. 
