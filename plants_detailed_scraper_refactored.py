@@ -54,16 +54,20 @@ def extract_content_between_elements(start_elem, end_elem=None, stop_text=None, 
     Returns:
         Extracted content as string
     """
-    content = ""
+    if not start_elem:
+        return ""
+        
+    content = []
     current_elem = start_elem.next_sibling
     
     while current_elem and (end_elem is None or current_elem != end_elem):
         if isinstance(current_elem, Tag):
             if current_elem.name != 'h3':  # Skip any nested h3
-                if special_handling and special_handling(current_elem, content):
+                if special_handling:
                     # Special handling returned content, use it
-                    special_content, should_stop = special_handling(current_elem, content)
-                    content += special_content
+                    special_content, should_stop = special_handling(current_elem, "".join(content))
+                    if special_content:
+                        content.append(special_content)
                     if should_stop:
                         break
                 else:
@@ -74,10 +78,10 @@ def extract_content_between_elements(start_elem, end_elem=None, stop_text=None, 
                     if stop_text and stop_text in text_content:
                         stop_index = text_content.find(stop_text)
                         if stop_index > 0:
-                            content += " " + text_content[:stop_index].strip()
+                            content.append(text_content[:stop_index].strip())
                         break
-                    else:
-                        content += " " + text_content
+                    elif text_content:
+                        content.append(text_content)
         
         current_elem = current_elem.next_sibling
         
@@ -85,7 +89,7 @@ def extract_content_between_elements(start_elem, end_elem=None, stop_text=None, 
         if end_elem is not None and current_elem == end_elem:
             break
     
-    return content.strip()
+    return " ".join(content).strip()
 
 def handle_special_elements(elem, content):
     """Handle special elements like tables."""
@@ -93,37 +97,67 @@ def handle_special_elements(elem, content):
         return process_table(elem), False
     return None, False
 
+def extract_recipe_links(field_item):
+    """Extract recipe links from a field item."""
+    recipe_links = {}
+    links = field_item.find_all('a')
+    base_url = "https://www.almanac.com"
+    
+    for link in links:
+        if '/recipe/' in link.get('href', ''):
+            recipe_name = link.get_text(strip=True)
+            recipe_url = base_url + link.get('href')
+            recipe_links[recipe_name] = recipe_url
+    
+    return recipe_links
+
 def process_field_with_subheadings(field_item, current_label):
     """Process a field item that contains subheadings (h3 tags)."""
+    if not field_item:
+        return {"content": "", "sub_headings": {}}
+        
     result = {
         "content": "",
         "sub_headings": {}
     }
+    
+    # Special handling for Recipes section
+    if current_label == "Recipes":
+        recipe_links = extract_recipe_links(field_item)
+        if recipe_links:
+            return recipe_links
+        # If no recipe links found, fall back to text content
+        result["content"] = field_item.get_text(separator=" ", strip=True) or ""
+        return result
     
     # Find all h3 tags
     h3_tags = field_item.find_all('h3')
     
     if not h3_tags:
         # No h3 tags, just get the content
-        result["content"] = field_item.get_text(separator=" ", strip=True)
+        result["content"] = field_item.get_text(separator=" ", strip=True) or ""
         return result
     
     # Process content before the first h3 tag
     first_h3 = h3_tags[0]
-    content_before_h3 = ""
+    content_before_h3 = []
     
     # Get content before the first h3
     for elem in first_h3.previous_siblings:
         if isinstance(elem, Tag):
-            content_before_h3 = elem.get_text(separator=" ", strip=True) + " " + content_before_h3
+            text = elem.get_text(separator=" ", strip=True)
+            if text:
+                content_before_h3.insert(0, text)
     
-    if content_before_h3.strip():
-        result["content"] = content_before_h3.strip()
+    if content_before_h3:
+        result["content"] = " ".join(content_before_h3)
     
     # Process each h3 and its content
     for i, h3 in enumerate(h3_tags):
         sub_heading = h3.get_text(strip=True)
-        
+        if not sub_heading:
+            continue
+            
         # Determine special handling based on the label
         stop_text = "ADVERTISEMENT" if current_label == "Cooking Notes" else None
         special_handler = handle_special_elements if current_label == "Pests/Diseases" else None
@@ -139,7 +173,8 @@ def process_field_with_subheadings(field_item, current_label):
             special_handling=special_handler
         )
         
-        result["sub_headings"][sub_heading] = content_after_h3
+        if content_after_h3:
+            result["sub_headings"][sub_heading] = content_after_h3
     
     return result
 
@@ -156,6 +191,11 @@ def process_plant_data(plant_data):
     processed_data = {}
     
     for key, value in plant_data.items():
+        # Handle recipe links (dictionary of recipe name to URL)
+        if key == "Recipes" and isinstance(value, dict) and all(isinstance(v, str) for v in value.values()):
+            processed_data[key] = value
+            continue
+            
         # Check if this is one of our structured fields with sub-headings
         if isinstance(value, dict) and "content" in value and "sub_headings" in value:
             # Special handling for Cooking Notes to stop at ADVERTISEMENT
@@ -206,22 +246,19 @@ def process_plant_data(plant_data):
 
 def scrape_plant(row, index, total_count, headers):
     """Scrape details for a single plant."""
-    name = row["Name"]
-    link = row["Link"]
-    image = row["Image URL"]
-    plant_name = name.replace(" ", "_")
-
-    print(f"[{index+1}/{total_count}] Scraping {name}...")
-
     try:
+        name = row["Name"]
+        link = row["Link"]
+        image = row["Image URL"]
+        plant_name = name.replace(" ", "_")
+
+        print(f"[{index+1}/{total_count}] Scraping {name}...")
+
         # Get the soup
         soup = get_soup(link, headers)
         if not soup:
+            print(f"  ⚠️ Failed to get soup for {name}")
             return None
-        
-        # Save the first page for verification
-        if index == 0:
-            save_html_to_file(soup, "detailed_page.html")
         
         # Initialize plant data
         plant_data = {
@@ -230,30 +267,12 @@ def scrape_plant(row, index, total_count, headers):
             "Image URL": image
         }
         
-        # Get the body wrapper
-        body_wrapper = soup.select_one("div.field.field--name-field-body")
-        
-        # Save body wrapper content
-        if body_wrapper:
-            save_html_to_file(body_wrapper, f"body_wrapper_{plant_name}.html")
-        else:
-            print("Body wrapper not found")
-            return None
-        
         # Get content blocks
         content_blocks = soup.select("#block-almanaco-content")
-        
-        # Save content blocks
-        if content_blocks:
-            output_filename = f"content_blocks_{plant_name}.html"
-            with open(output_filename, 'w', encoding='utf-8') as f:
-                for block in content_blocks:
-                    f.write(block.prettify())
-            print(f"Content blocks saved to {output_filename}")
-        else:
-            print("Content blocks not found")
+        if not content_blocks:
+            print(f"  ⚠️ No content blocks found for {name}")
             return None
-        
+            
         # Extract data from content blocks
         for block in content_blocks:
             current_label = None
@@ -261,29 +280,22 @@ def scrape_plant(row, index, total_count, headers):
                 if isinstance(child, Tag):
                     if 'field__label' in child.get('class', []):
                         current_label = child.get_text(strip=True)
-                        # Initialize with a dictionary to hold both content and sub-headings
-                        plant_data[current_label] = {
-                            "content": "",
-                            "sub_headings": {}
-                        }
-                    elif 'field__item' in child.get('class', []) and current_label:
+                        if current_label:
+                            # Initialize with a dictionary to hold both content and sub-headings
+                            plant_data[current_label] = {
+                                "content": "",
+                                "sub_headings": {}
+                            }
+                    elif current_label and 'field__item' in child.get('class', []):
                         # Process the field item
                         field_data = process_field_with_subheadings(child, current_label)
-                        
-                        # Update the plant data
-                        if plant_data[current_label]["content"]:
-                            plant_data[current_label]["content"] += f"\n{field_data['content']}"
-                        else:
-                            plant_data[current_label]["content"] = field_data["content"]
-                        
-                        # Add sub-headings
-                        plant_data[current_label]["sub_headings"].update(field_data["sub_headings"])
+                        if field_data:
+                            plant_data[current_label] = field_data
         
-        # Process the plant data
         return process_plant_data(plant_data)
-    
+        
     except Exception as e:
-        print(f"  ❌ Error: {e}")
+        print(f"  ❌ Error processing {name}: {str(e)}")
         return None
 
 def main():
@@ -302,7 +314,7 @@ def main():
     os.makedirs("output", exist_ok=True)
     
     # Scrape each plant
-    for i, row in df.head(1).iterrows():
+    for i, row in df.iterrows():
         plant_data = scrape_plant(row, i, len(df), headers)
         if plant_data:
             all_plants.append(plant_data)
