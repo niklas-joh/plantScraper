@@ -5,6 +5,10 @@ import pandas as pd
 import json
 import time
 import os
+import urllib3
+
+# Disable SSL verification warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def save_html_to_file(content, filename):
     """Save HTML content to a file."""
@@ -14,7 +18,7 @@ def save_html_to_file(content, filename):
 
 def get_soup(url, headers):
     """Get BeautifulSoup object from URL."""
-    response = requests.get(url, headers=headers, timeout=10)
+    response = requests.get(url, headers=headers, timeout=10, verify=False)
     if response.status_code != 200:
         print(f"  ⚠️ Skipped (Status {response.status_code})")
         return None
