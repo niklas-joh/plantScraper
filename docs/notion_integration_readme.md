@@ -42,20 +42,21 @@ The Notion integration enables you to:
 
 ## Usage
 
-Once implemented, you can use the integration with the following command:
+You can use the integration with the following command:
 
 ```bash
-python scripts/sync_to_notion.py
+python scripts/sync_to_notion_requests.py
 ```
 
 Optional arguments:
 - `--api-key`: Override the Notion API key from environment variable
 - `--database-id`: Override the Notion database ID from environment variable
 - `--plants-file`: Specify a custom path to the plants JSON file
+- `--limit`: Limit the number of plants to sync
 
 Example:
 ```bash
-python scripts/sync_to_notion.py --plants-file output/custom_plants.json
+python scripts/sync_to_notion_requests.py --limit 10
 ```
 
 ## Database Schema

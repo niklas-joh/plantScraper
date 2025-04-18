@@ -40,6 +40,7 @@ plantScraper/
 - Extract recipe links
 - Clean advertisement content
 - GitHub integration for issue management
+- Notion integration for storing and sharing plant data
 
 ## Installation
 
@@ -115,6 +116,28 @@ To update a GitHub issue, use the `update_github_issue.py` script:
 ```
 python scripts/update_github_issue.py ISSUE_NUMBER {comment,update} [--file FILE] [--owner OWNER] [--repo REPO]
 ```
+
+### Notion Integration
+
+To sync plant data to a Notion database, use the `sync_to_notion_requests.py` script:
+
+```
+python scripts/sync_to_notion_requests.py [--api-key API_KEY] [--database-id DATABASE_ID] [--plants-file PLANTS_FILE] [--limit LIMIT]
+```
+
+Options:
+- `--api-key`: Override the Notion API key from environment variable
+- `--database-id`: Override the Notion database ID from environment variable
+- `--plants-file`: Specify a custom path to the plants JSON file
+- `--limit`: Limit the number of plants to sync
+
+Example:
+```
+# Sync 10 plants to Notion
+python scripts/sync_to_notion_requests.py --limit 10
+```
+
+For detailed instructions on setting up the Notion integration, see [Notion Integration Documentation](docs/notion_integration_readme.md).
 
 ## Configuration
 

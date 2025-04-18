@@ -7,9 +7,17 @@ including methods for retrieving, creating, and updating pages and databases.
 
 import time
 import logging
+import ssl
+import certifi
+import httpx
 from notion_client import Client
 from notion_client.errors import APIResponseError
 from src.notion import config
+
+# Create a custom SSL context that doesn't verify certificates
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
 
 # Set up logging
 logger = logging.getLogger(__name__)

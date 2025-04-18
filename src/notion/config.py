@@ -6,7 +6,13 @@ including API key and database ID handling.
 """
 
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 from src import config
+
+# Load environment variables from .env file
+dotenv_path = Path(config.BASE_DIR) / '.env'
+load_dotenv(dotenv_path)
 
 # Notion API settings
 NOTION_API_KEY = os.getenv("NOTION_API_KEY", "")

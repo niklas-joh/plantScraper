@@ -13,7 +13,11 @@ def main():
     # Files to remove
     redundant_files = [
         "comment_on_issue.py",
-        "create_notion_integration_issue.py"
+        "create_notion_integration_issue.py",
+        "create_notion_database.py",
+        "create_notion_database_requests.py",
+        "run_notion_sync.py",
+        "sync_to_notion.py"
     ]
     
     # Get the scripts directory
