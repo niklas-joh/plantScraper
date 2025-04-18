@@ -44,6 +44,21 @@ def test_validate_database_schema():
             },
             "Photo Credit": {
                 "rich_text": {}
+            },
+            "Planting": {
+                "rich_text": {}
+            },
+            "Growing": {
+                "rich_text": {}
+            },
+            "Harvesting": {
+                "rich_text": {}
+            },
+            "Wit and Wisdom": {
+                "rich_text": {}
+            },
+            "Cooking Notes": {
+                "rich_text": {}
             }
         }
     }
@@ -166,3 +181,15 @@ def test_get_database_creation_schema():
     assert "url" in schema["Image URL"]
     assert "Photo Credit" in schema
     assert "rich_text" in schema["Photo Credit"]
+    
+    # Verify the new fields
+    assert "Planting" in schema
+    assert "rich_text" in schema["Planting"]
+    assert "Growing" in schema
+    assert "rich_text" in schema["Growing"]
+    assert "Harvesting" in schema
+    assert "rich_text" in schema["Harvesting"]
+    assert "Wit and Wisdom" in schema
+    assert "rich_text" in schema["Wit and Wisdom"]
+    assert "Cooking Notes" in schema
+    assert "rich_text" in schema["Cooking Notes"]

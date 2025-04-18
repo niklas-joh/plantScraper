@@ -70,6 +70,36 @@ def transform_plant_to_notion_properties(plant):
                     ]
                 }
     
+    # Add rich text properties for content sections
+    for field in ["Planting", "Growing", "Harvesting", "Wit and Wisdom", "Cooking Notes"]:
+        if field in plant:
+            content = ""
+            if isinstance(plant[field], dict) and "content" in plant[field]:
+                content = plant[field]["content"]
+                
+                # Add sub-headings if they exist
+                if "sub_headings" in plant[field]:
+                    for sub_heading, sub_content in plant[field]["sub_headings"].items():
+                        content += f"\n\n{sub_heading}:\n{sub_content}"
+            elif isinstance(plant[field], str):
+                content = plant[field]
+                
+            if content:
+                # Truncate content if it's too long for a property (Notion has a limit)
+                max_length = 2000
+                if len(content) > max_length:
+                    content = content[:max_length-3] + "..."
+                    
+                properties[field] = {
+                    "rich_text": [
+                        {
+                            "text": {
+                                "content": content
+                            }
+                        }
+                    ]
+                }
+    
     return properties
 
 def create_rich_text_block(content):

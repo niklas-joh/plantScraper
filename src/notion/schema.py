@@ -39,7 +39,23 @@ PLANT_DATABASE_SCHEMA = {
     },
     "Photo Credit": {
         "rich_text": {}
+    },
+    "Planting": {
+        "rich_text": {}
+    },
+    "Growing": {
+        "rich_text": {}
+    },
+    "Harvesting": {
+        "rich_text": {}
+    },
+    "Wit and Wisdom": {
+        "rich_text": {}
+    },
+    "Cooking Notes": {
+        "rich_text": {}
     }
+    # Note: Pests/Diseases and Recipes will be handled as tables in page content
 }
 
 def validate_database_schema(database):

@@ -147,6 +147,131 @@ def transform_plant_to_notion_properties(plant):
             ]
         }
     
+    # Add Planting if available
+    if "Planting" in plant:
+        content = ""
+        if isinstance(plant["Planting"], dict) and "content" in plant["Planting"]:
+            content = plant["Planting"]["content"]
+            
+            # Add sub-headings if they exist
+            if "sub_headings" in plant["Planting"]:
+                for sub_heading, sub_content in plant["Planting"]["sub_headings"].items():
+                    content += f"\n\n{sub_heading}:\n{sub_content}"
+        elif isinstance(plant["Planting"], str):
+            content = plant["Planting"]
+            
+        if content:
+            # Truncate content if it's too long for a property (Notion has a limit)
+            max_length = 2000
+            if len(content) > max_length:
+                content = content[:max_length-3] + "..."
+                
+            properties["Planting"] = {
+                "rich_text": [
+                    {
+                        "text": {
+                            "content": content
+                        }
+                    }
+                ]
+            }
+    
+    # Add Growing if available
+    if "Growing" in plant:
+        content = ""
+        if isinstance(plant["Growing"], dict) and "content" in plant["Growing"]:
+            content = plant["Growing"]["content"]
+            
+            # Add sub-headings if they exist
+            if "sub_headings" in plant["Growing"]:
+                for sub_heading, sub_content in plant["Growing"]["sub_headings"].items():
+                    content += f"\n\n{sub_heading}:\n{sub_content}"
+        elif isinstance(plant["Growing"], str):
+            content = plant["Growing"]
+            
+        if content:
+            # Truncate content if it's too long for a property
+            max_length = 2000
+            if len(content) > max_length:
+                content = content[:max_length-3] + "..."
+                
+            properties["Growing"] = {
+                "rich_text": [
+                    {
+                        "text": {
+                            "content": content
+                        }
+                    }
+                ]
+            }
+    
+    # Add Harvesting if available
+    if "Harvesting" in plant:
+        content = ""
+        if isinstance(plant["Harvesting"], dict) and "content" in plant["Harvesting"]:
+            content = plant["Harvesting"]["content"]
+            
+            # Add sub-headings if they exist
+            if "sub_headings" in plant["Harvesting"]:
+                for sub_heading, sub_content in plant["Harvesting"]["sub_headings"].items():
+                    content += f"\n\n{sub_heading}:\n{sub_content}"
+        elif isinstance(plant["Harvesting"], str):
+            content = plant["Harvesting"]
+            
+        if content:
+            # Truncate content if it's too long for a property
+            max_length = 2000
+            if len(content) > max_length:
+                content = content[:max_length-3] + "..."
+                
+            properties["Harvesting"] = {
+                "rich_text": [
+                    {
+                        "text": {
+                            "content": content
+                        }
+                    }
+                ]
+            }
+    
+    # Add Wit and Wisdom if available
+    if "Wit and Wisdom" in plant:
+        content = plant["Wit and Wisdom"]
+        if content:
+            # Truncate content if it's too long for a property
+            max_length = 2000
+            if len(content) > max_length:
+                content = content[:max_length-3] + "..."
+                
+            properties["Wit and Wisdom"] = {
+                "rich_text": [
+                    {
+                        "text": {
+                            "content": content
+                        }
+                    }
+                ]
+            }
+    
+    # Add Cooking Notes if available
+    if "Cooking Notes" in plant:
+        content = plant["Cooking Notes"]
+        if content:
+            # Truncate content if it's too long for a property
+            max_length = 2000
+            if len(content) > max_length:
+                content = content[:max_length-3] + "..."
+                
+            properties["Cooking Notes"] = {
+                "rich_text": [
+                    {
+                        "text": {
+                            "content": content
+                        }
+                    }
+                ]
+            }
+    
     return properties
 
 def create_plant_content_blocks(plant):
@@ -161,23 +286,6 @@ def create_plant_content_blocks(plant):
     """
     blocks = []
     
-    # Add description if available
-    if "Description" in plant:
-        blocks.append({
-            "object": "block",
-            "type": "paragraph",
-            "paragraph": {
-                "rich_text": [
-                    {
-                        "type": "text",
-                        "text": {
-                            "content": plant["Description"]
-                        }
-                    }
-                ]
-            }
-        })
-    
     # Add image if available
     if "Image URL" in plant:
         blocks.append({
@@ -188,6 +296,251 @@ def create_plant_content_blocks(plant):
                 "external": {
                     "url": plant["Image URL"]
                 }
+            }
+        })
+    
+    # Add sections for planting, growing, harvesting
+    for section in ["Planting", "Growing", "Harvesting"]:
+        if section in plant:
+            # Add section heading
+            blocks.append({
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {
+                    "rich_text": [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": section
+                            }
+                        }
+                    ]
+                }
+            })
+            
+            # Add content paragraph
+            if isinstance(plant[section], dict) and "content" in plant[section] and plant[section]["content"]:
+                blocks.append({
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [
+                            {
+                                "type": "text",
+                                "text": {
+                                    "content": plant[section]["content"]
+                                }
+                            }
+                        ]
+                    }
+                })
+            
+            # Add sub-headings
+            if isinstance(plant[section], dict) and "sub_headings" in plant[section]:
+                for sub_heading, content in plant[section]["sub_headings"].items():
+                    blocks.append({
+                        "object": "block",
+                        "type": "heading_3",
+                        "heading_3": {
+                            "rich_text": [
+                                {
+                                    "type": "text",
+                                    "text": {
+                                        "content": sub_heading
+                                    }
+                                }
+                            ]
+                        }
+                    })
+                    
+                    blocks.append({
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [
+                                {
+                                    "type": "text",
+                                    "text": {
+                                        "content": content
+                                    }
+                                }
+                            ]
+                        }
+                    })
+    
+    # Add pests/diseases table
+    if "Pests/Diseases" in plant and "headers" in plant["Pests/Diseases"] and "rows" in plant["Pests/Diseases"]:
+        # Add section heading
+        blocks.append({
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Pests and Diseases"
+                        }
+                    }
+                ]
+            }
+        })
+        
+        # Create table
+        headers = plant["Pests/Diseases"]["headers"]
+        rows = plant["Pests/Diseases"]["rows"]
+        
+        table_width = len(headers)
+        table_children = []
+        
+        # Add header row
+        header_row = {
+            "object": "block",
+            "type": "table_row",
+            "table_row": {
+                "cells": [[{"type": "text", "text": {"content": header}}] for header in headers]
+            }
+        }
+        table_children.append(header_row)
+        
+        # Add data rows
+        for row in rows:
+            if isinstance(row, dict):
+                # Handle dictionary rows (like pests/diseases)
+                cells = []
+                for header in headers:
+                    header_key = header.lower().replace("/", "_").replace(" ", "_")
+                    cells.append([{"type": "text", "text": {"content": row.get(header_key, "")}}])
+                
+                data_row = {
+                    "object": "block",
+                    "type": "table_row",
+                    "table_row": {
+                        "cells": cells
+                    }
+                }
+            else:
+                # Handle list rows
+                data_row = {
+                    "object": "block",
+                    "type": "table_row",
+                    "table_row": {
+                        "cells": [[{"type": "text", "text": {"content": str(cell)}}] for cell in row]
+                    }
+                }
+            
+            table_children.append(data_row)
+        
+        blocks.append({
+            "object": "block",
+            "type": "table",
+            "table": {
+                "table_width": table_width,
+                "has_column_header": True,
+                "has_row_header": False,
+                "children": table_children
+            }
+        })
+    
+    # Add recipes
+    if "Recipes" in plant and isinstance(plant["Recipes"], dict) and plant["Recipes"]:
+        # Add section heading
+        blocks.append({
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Recipes"
+                        }
+                    }
+                ]
+            }
+        })
+        
+        # Add bulleted list for recipes
+        for recipe_name, recipe_url in plant["Recipes"].items():
+            text_obj = {
+                "type": "text",
+                "text": {
+                    "content": recipe_name
+                }
+            }
+            
+            if recipe_url:
+                text_obj["text"]["link"] = {"url": recipe_url}
+            
+            blocks.append({
+                "object": "block",
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {
+                    "rich_text": [text_obj]
+                }
+            })
+    
+    # Add wit and wisdom
+    if "Wit and Wisdom" in plant and plant["Wit and Wisdom"]:
+        blocks.append({
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Wit and Wisdom"
+                        }
+                    }
+                ]
+            }
+        })
+        
+        blocks.append({
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "rich_text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": plant["Wit and Wisdom"]
+                        }
+                    }
+                ]
+            }
+        })
+    
+    # Add cooking notes
+    if "Cooking Notes" in plant and plant["Cooking Notes"]:
+        blocks.append({
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": "Cooking Notes"
+                        }
+                    }
+                ]
+            }
+        })
+        
+        blocks.append({
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "rich_text": [
+                    {
+                        "type": "text",
+                        "text": {
+                            "content": plant["Cooking Notes"]
+                        }
+                    }
+                ]
             }
         })
     

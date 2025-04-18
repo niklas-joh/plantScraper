@@ -27,7 +27,21 @@ def test_transform_plant_to_notion_properties():
         "Soil pH": "Slightly Acidic to Neutral",
         "Link": "https://example.com/plant",
         "Image URL": "https://example.com/image.jpg",
-        "Photo Credit": "Test Photographer"
+        "Photo Credit": "Test Photographer",
+        "Planting": {
+            "content": "Planting instructions",
+            "sub_headings": {
+                "When to Plant": "Plant in spring"
+            }
+        },
+        "Growing": {
+            "content": "Growing instructions"
+        },
+        "Harvesting": {
+            "content": "Harvesting instructions"
+        },
+        "Wit and Wisdom": "Interesting facts",
+        "Cooking Notes": "Cooking instructions"
     }
     
     # Transform to Notion properties
@@ -43,6 +57,23 @@ def test_transform_plant_to_notion_properties():
     assert properties["Sun Exposure"]["multi_select"][0]["name"] == "Full Sun"
     assert properties["Sun Exposure"]["multi_select"][1]["name"] == "Part Sun"
     assert properties["Soil pH"]["select"]["name"] == "Slightly Acidic to Neutral"
+    
+    # Verify the new rich text properties
+    assert "Planting" in properties
+    assert properties["Planting"]["rich_text"][0]["text"]["content"].startswith("Planting instructions")
+    assert "When to Plant" in properties["Planting"]["rich_text"][0]["text"]["content"]
+    
+    assert "Growing" in properties
+    assert properties["Growing"]["rich_text"][0]["text"]["content"] == "Growing instructions"
+    
+    assert "Harvesting" in properties
+    assert properties["Harvesting"]["rich_text"][0]["text"]["content"] == "Harvesting instructions"
+    
+    assert "Wit and Wisdom" in properties
+    assert properties["Wit and Wisdom"]["rich_text"][0]["text"]["content"] == "Interesting facts"
+    
+    assert "Cooking Notes" in properties
+    assert properties["Cooking Notes"]["rich_text"][0]["text"]["content"] == "Cooking instructions"
 
 def test_create_rich_text_block():
     """Test creating a rich text block."""
