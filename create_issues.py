@@ -47,6 +47,43 @@ def create_github_issue(token: str, owner: str, repo: str, title: str, body: str
             print(f"Response body: {e.response.text}")
         raise
 
+def close_github_issue(token: str, owner: str, repo: str, issue_number: int) -> Dict:
+    """
+    Close a GitHub issue using the REST API.
+    
+    Args:
+        token (str): GitHub personal access token
+        owner (str): Repository owner
+        repo (str): Repository name
+        issue_number (int): Issue number to close
+        
+    Returns:
+        Dict: Response from GitHub API
+    """
+    url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}"
+    
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    
+    data = {
+        "state": "closed"
+    }
+    
+    try:
+        # Disable SSL verification - use this only if you trust the connection
+        response = requests.patch(url, headers=headers, json=data, verify=False)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error making request: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Response status code: {e.response.status_code}")
+            print(f"Response body: {e.response.text}")
+        raise
+
 def main():
     # Get token from environment variable
     token = os.getenv("GITHUB_TOKEN")
