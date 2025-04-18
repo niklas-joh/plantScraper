@@ -236,7 +236,21 @@ def transform_plant_to_notion_properties(plant):
     
     # Add Wit and Wisdom if available
     if "Wit and Wisdom" in plant:
-        content = plant["Wit and Wisdom"]
+        content = ""
+        wit_wisdom = plant["Wit and Wisdom"]
+        
+        # Handle both string and dictionary formats
+        if isinstance(wit_wisdom, dict):
+            if "content" in wit_wisdom:
+                content = wit_wisdom["content"]
+                
+                # Add sub-headings if they exist
+                if "sub_headings" in wit_wisdom:
+                    for sub_heading, sub_content in wit_wisdom["sub_headings"].items():
+                        content += f"\n\n{sub_heading}\n{sub_content}"
+        else:
+            content = wit_wisdom
+            
         if content:
             # Truncate content if it's too long for a property
             max_length = 2000
@@ -492,7 +506,9 @@ def create_plant_content_blocks(plant):
             })
     
     # Add wit and wisdom
-    if "Wit and Wisdom" in plant and plant["Wit and Wisdom"]:
+    if "Wit and Wisdom" in plant:
+        wit_wisdom = plant["Wit and Wisdom"]
+        
         blocks.append({
             "object": "block",
             "type": "heading_2",
@@ -508,25 +524,88 @@ def create_plant_content_blocks(plant):
             }
         })
         
-        # Truncate content if it's too long
-        content = plant["Wit and Wisdom"]
-        if len(content) > 2000:
-            content = content[:1997] + "..."
-            
-        blocks.append({
-            "object": "block",
-            "type": "paragraph",
-            "paragraph": {
-                "rich_text": [
-                    {
-                        "type": "text",
-                        "text": {
-                            "content": content
-                        }
+        # Handle both string and dictionary formats
+        if isinstance(wit_wisdom, dict):
+            if "content" in wit_wisdom:
+                content = wit_wisdom["content"]
+                
+                # Truncate content if it's too long
+                if len(content) > 2000:
+                    content = content[:1997] + "..."
+                    
+                blocks.append({
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [
+                            {
+                                "type": "text",
+                                "text": {
+                                    "content": content
+                                }
+                            }
+                        ]
                     }
-                ]
-            }
-        })
+                })
+                
+                # Add sub-headings if they exist
+                if "sub_headings" in wit_wisdom:
+                    for sub_heading, sub_content in wit_wisdom["sub_headings"].items():
+                        blocks.append({
+                            "object": "block",
+                            "type": "heading_3",
+                            "heading_3": {
+                                "rich_text": [
+                                    {
+                                        "type": "text",
+                                        "text": {
+                                            "content": sub_heading
+                                        }
+                                    }
+                                ]
+                            }
+                        })
+                        
+                        # Truncate content if it's too long
+                        if len(sub_content) > 2000:
+                            sub_content = sub_content[:1997] + "..."
+                            
+                        blocks.append({
+                            "object": "block",
+                            "type": "paragraph",
+                            "paragraph": {
+                                "rich_text": [
+                                    {
+                                        "type": "text",
+                                        "text": {
+                                            "content": sub_content
+                                        }
+                                    }
+                                ]
+                            }
+                        })
+        else:
+            # Handle string format
+            content = wit_wisdom
+            
+            # Truncate content if it's too long
+            if len(content) > 2000:
+                content = content[:1997] + "..."
+                
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": content
+                            }
+                        }
+                    ]
+                }
+            })
     
     # Add cooking notes
     if "Cooking Notes" in plant and plant["Cooking Notes"]:
