@@ -42,21 +42,96 @@ def get_soup(url, headers):
     return BeautifulSoup(response.content, "html.parser")
 
 def process_table(table_tag):
-    """Process a table tag and return formatted text."""
-    table_data = []
-    rows = table_tag.find_all('tr')
-    for row in rows:
-        row_data = []
-        cells = row.find_all(['th', 'td'])
-        for cell in cells:
-            row_data.append(cell.get_text(strip=True))
-        table_data.append(row_data)
+    """
+    Process a table tag and return a structured format with headers and rows.
+    For Pests/Diseases tables, uses specific keys in the expected format.
+    """
+    # Check if this is a pests/diseases table by looking for the caption or headers
+    is_pest_table = False
+    caption = table_tag.find('caption')
+    if caption and "Pests and Diseases" in caption.get_text():
+        is_pest_table = True
     
-    # Format table as text
-    table_text = "\nTable:\n"
-    for row in table_data:
-        table_text += " | ".join(row) + "\n"
-    return table_text
+    # Also check headers for "Pest/Disease" column
+    if table_tag.find(string=lambda text: text and "Pest/Disease" in text):
+        is_pest_table = True
+    
+    if is_pest_table:
+        # This is a pests/diseases table
+        # First, extract the column headers from the thead section
+        thead = table_tag.find('thead')
+        if thead:
+            headers_row = thead.find('tr')
+            headers = [header.get_text(strip=True) for header in headers_row.find_all('th')]
+        else:
+            # If no thead, try to get headers from the first row
+            headers_row = table_tag.find('tr')
+            if not headers_row:
+                return {"headers": [], "rows": []}
+            headers = [header.get_text(strip=True) for header in headers_row.find_all('th')]
+        
+        # Process data rows from the tbody section
+        tbody = table_tag.find('tbody')
+        if tbody:
+            data_rows = tbody.find_all('tr')
+        else:
+            # If no tbody, use all rows except the first (header) row
+            data_rows = table_tag.find_all('tr')[1:]
+        
+        processed_rows = []
+        
+        for row in data_rows:
+            # In this table, the pest name is in a th tag, not a td tag
+            pest_cell = row.find('th')
+            if not pest_cell:
+                continue
+                
+            # Get all td cells for the other columns
+            cells = row.find_all('td')
+            if len(cells) < 3:  # Need at least type, symptoms, and control
+                continue
+                
+            # Create row data with standardized keys
+            row_data = {
+                "pest": pest_cell.get_text(strip=True),
+                "type": cells[0].get_text(strip=True),
+                "symptoms": cells[1].get_text(strip=True),
+                "control": cells[2].get_text(strip=True)
+            }
+            
+            processed_rows.append(row_data)
+        
+        # Return structured format with headers and rows
+        return {
+            "headers": headers,
+            "rows": processed_rows
+        }
+    else:
+        # Generic table processing for non-pest tables
+        headers = [header.get_text(strip=True) for header in table_tag.find_all('th')]
+        
+        # Skip the header row when processing rows
+        rows = table_tag.find_all('tr')[1:] if headers else table_tag.find_all('tr')
+        
+        # Process rows
+        processed_rows = []
+        for row in rows:
+            cells = row.find_all('td')
+            # Skip rows without enough cells
+            if len(cells) < len(headers):
+                continue
+                
+            row_data = {}
+            for i, cell in enumerate(cells):
+                if i < len(headers):  # Ensure we don't exceed headers length
+                    row_data[headers[i]] = cell.get_text(strip=True)
+            processed_rows.append(row_data)
+        
+        # Return structured format with headers and rows
+        return {
+            "headers": headers,
+            "rows": processed_rows
+        }
 
 def extract_content_between_elements(start_elem, end_elem=None, stop_text=None, special_handling=None):
     """
@@ -69,12 +144,13 @@ def extract_content_between_elements(start_elem, end_elem=None, stop_text=None, 
         special_handling: Function to handle special elements (optional)
     
     Returns:
-        Extracted content as string
+        Extracted content as string or structured data for tables
     """
     if not start_elem:
         return ""
         
     content = []
+    structured_data = None  # For storing table data
     current_elem = start_elem.next_sibling
     
     while current_elem and (end_elem is None or current_elem != end_elem):
@@ -82,9 +158,15 @@ def extract_content_between_elements(start_elem, end_elem=None, stop_text=None, 
             if current_elem.name != 'h3':  # Skip any nested h3
                 if special_handling:
                     # Special handling returned content, use it
-                    special_content, should_stop = special_handling(current_elem, "".join(content))
-                    if special_content:
+                    special_content, should_stop = special_handling(current_elem, "".join(content) if content else "")
+                    
+                    # If we got structured data (like a table), store it separately
+                    if special_content and isinstance(special_content, dict) and "headers" in special_content and "rows" in special_content:
+                        structured_data = special_content
+                        should_stop = True  # Stop after finding a table
+                    elif special_content:
                         content.append(special_content)
+                        
                     if should_stop:
                         break
                 else:
@@ -113,11 +195,17 @@ def extract_content_between_elements(start_elem, end_elem=None, stop_text=None, 
         if end_elem is not None and current_elem == end_elem:
             break
     
-    return " ".join(content).strip()
+    # Return structured data if we found a table, otherwise join content as string
+    if structured_data:
+        return structured_data
+    else:
+        return " ".join(content).strip()
 
 def handle_special_elements(elem, content):
     """Handle special elements like tables."""
     if elem.name == 'table':
+        # Return the table data structure directly
+        # The False indicates we don't want to stop processing
         return process_table(elem), False
     return None, False
 
@@ -412,6 +500,20 @@ def scrape_plant(row, index, total_count, headers):
                 if recipe_links:
                     plant_data[field_name] = recipe_links
                 continue
+            
+            # Special handling for Pests/Diseases section to preserve table structure
+            if field_name == "Pests/Diseases":
+                for item in items:
+                    # Look for tables in the item
+                    tables = item.find_all('table')
+                    if tables:
+                        # Process the first table found
+                        table_data = process_table(tables[0])
+                        plant_data[field_name] = table_data
+                        break
+                # If we processed a table, continue to next field
+                if field_name in plant_data:
+                    continue
             
             # Process field content
             field_content = ""
