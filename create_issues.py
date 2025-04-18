@@ -1,6 +1,7 @@
 import requests
 import os
-from typing import Dict, List
+import json
+from typing import Dict, List, Optional
 import urllib3
 
 # Disable SSL warnings - use this only if you trust the connection
@@ -84,19 +85,79 @@ def close_github_issue(token: str, owner: str, repo: str, issue_number: int) -> 
             print(f"Response body: {e.response.text}")
         raise
 
-def main():
-    # Get token from environment variable
-    token = os.getenv("GITHUB_TOKEN")
-    if not token:
-        raise ValueError("Please set the GITHUB_TOKEN environment variable")
+def create_issues_from_list(token: str, owner: str, repo: str, issues: List[Dict]) -> List[Dict]:
+    """
+    Create multiple GitHub issues from a list of issue dictionaries.
     
-    owner = "niklas-joh"
-    repo = "plantScraper"
+    Args:
+        token (str): GitHub personal access token
+        owner (str): Repository owner
+        repo (str): Repository name
+        issues (List[Dict]): List of issue dictionaries with keys: title, body, labels
+        
+    Returns:
+        List[Dict]: List of responses from GitHub API
+    """
+    responses = []
     
-    # Issue 1: Recipe Links
-    recipe_issue = {
-        "title": "Enhancement: Add Recipe Links to Recipe Section",
-        "body": """Currently, the recipe section only includes recipe names without their corresponding links. This enhancement will:
+    for issue in issues:
+        try:
+            response = create_github_issue(
+                token, owner, repo,
+                issue["title"],
+                issue["body"],
+                issue.get("labels", [])  # Use empty list if labels not provided
+            )
+            responses.append(response)
+            print(f"Created issue #{response['number']}: {issue['title']}")
+        except Exception as e:
+            print(f"Error creating issue '{issue['title']}': {str(e)}")
+    
+    return responses
+
+def load_issues_from_json(json_file_path: str) -> List[Dict]:
+    """
+    Load issues from a JSON file.
+    
+    Args:
+        json_file_path (str): Path to the JSON file containing issues
+        
+    Returns:
+        List[Dict]: List of issue dictionaries
+    """
+    try:
+        with open(json_file_path, 'r') as f:
+            issues = json.load(f)
+        
+        # Validate the structure
+        if not isinstance(issues, list):
+            raise ValueError("JSON file must contain a list of issues")
+        
+        for i, issue in enumerate(issues):
+            if not isinstance(issue, dict):
+                raise ValueError(f"Issue at index {i} is not a dictionary")
+            if "title" not in issue:
+                raise ValueError(f"Issue at index {i} is missing 'title'")
+            if "body" not in issue:
+                raise ValueError(f"Issue at index {i} is missing 'body'")
+        
+        return issues
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON format: {str(e)}")
+    except FileNotFoundError:
+        raise FileNotFoundError(f"JSON file not found: {json_file_path}")
+
+def get_default_issues() -> List[Dict]:
+    """
+    Get a list of default issues for demonstration purposes.
+    
+    Returns:
+        List[Dict]: List of default issue dictionaries
+    """
+    return [
+        {
+            "title": "Enhancement: Add Recipe Links to Recipe Section",
+            "body": """Currently, the recipe section only includes recipe names without their corresponding links. This enhancement will:
 
 1. Functionality Changes:
    - Capture recipe URLs during scraping
@@ -121,13 +182,11 @@ def main():
    - JSON structure maintains backward compatibility
    - Links are valid and accessible
    - Documentation is updated""",
-        "labels": ["enhancement"]
-    }
-    
-    # Issue 2: Table Formatting
-    table_issue = {
-        "title": "Enhancement: Preserve Table Formatting for Pest/Diseases Section",
-        "body": """Currently, the pest/diseases section loses its table formatting when stored in JSON. This enhancement will:
+            "labels": ["enhancement"]
+        },
+        {
+            "title": "Enhancement: Preserve Table Formatting for Pest/Diseases Section",
+            "body": """Currently, the pest/diseases section loses its table formatting when stored in JSON. This enhancement will:
 
 1. Functionality Changes:
    - Preserve table structure from HTML
@@ -160,13 +219,11 @@ def main():
    - Row relationships are maintained
    - Data is easily parseable
    - Documentation is updated""",
-        "labels": ["enhancement"]
-    }
-    
-    # Issue 3: Advertisement Text Removal
-    ad_removal_issue = {
-        "title": "Bug: Advertisement Text Showing in Cooking Notes Section",
-        "body": """Currently, advertisement text is showing up in the Cooking Notes section despite our code to remove it. This bug fix will:
+            "labels": ["enhancement"]
+        },
+        {
+            "title": "Bug: Advertisement Text Showing in Cooking Notes Section",
+            "body": """Currently, advertisement text is showing up in the Cooking Notes section despite our code to remove it. This bug fix will:
 
 1. Problem Description:
    - Advertisement text with markers like "ADVERTISEMENT" and "Advertisement" appears in the Cooking Notes section
@@ -186,41 +243,43 @@ def main():
    - No "ADVERTISEMENT" text appears in any section of the JSON output
    - Content quality and readability is maintained
    - The solution is robust against different advertisement text variations""",
-        "labels": ["bug"]
-    }
+            "labels": ["bug"]
+        }
+    ]
+
+def main():
+    # Get token from environment variable
+    token = os.getenv("GITHUB_TOKEN")
+    if not token:
+        raise ValueError("Please set the GITHUB_TOKEN environment variable")
+    
+    # Default repository information
+    owner = os.getenv("GITHUB_OWNER", "niklas-joh")
+    repo = os.getenv("GITHUB_REPO", "plantScraper")
+    
+    # Check for command line arguments
+    import sys
+    json_file_path = None
+    
+    if len(sys.argv) > 1:
+        json_file_path = sys.argv[1]
     
     try:
-        # Create Recipe Links issue
-        recipe_response = create_github_issue(
-            token, owner, repo,
-            recipe_issue["title"],
-            recipe_issue["body"],
-            recipe_issue["labels"]
-        )
-        print(f"Created Recipe Links issue #{recipe_response['number']}")
+        # Load issues from JSON file if provided
+        if json_file_path:
+            print(f"Loading issues from {json_file_path}")
+            issues = load_issues_from_json(json_file_path)
+        else:
+            # Use default issues if no file provided
+            print("No JSON file provided. Using default issues.")
+            issues = get_default_issues()
         
-        # Create Table Formatting issue
-        table_response = create_github_issue(
-            token, owner, repo,
-            table_issue["title"],
-            table_issue["body"],
-            table_issue["labels"]
-        )
-        print(f"Created Table Formatting issue #{table_response['number']}")
+        # Create the issues
+        create_issues_from_list(token, owner, repo, issues)
         
-        # Create Advertisement Text Removal issue
-        ad_removal_response = create_github_issue(
-            token, owner, repo,
-            ad_removal_issue["title"],
-            ad_removal_issue["body"],
-            ad_removal_issue["labels"]
-        )
-        print(f"Created Advertisement Text Removal issue #{ad_removal_response['number']}")
-        
-    except requests.exceptions.RequestException as e:
-        print(f"Error creating issues: {e}")
-        if hasattr(e, 'response'):
-            print(f"Response: {e.response.text}")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
