@@ -2,10 +2,22 @@
 Tests for the Notion schema module.
 
 This module contains tests for the schema validation functions.
+
+NOTE: The src.notion package is deprecated and will be removed in a future version.
+These tests are kept for backward compatibility during the transition period.
 """
 
 import pytest
 from src.notion.schema import validate_database_schema, get_database_creation_schema, PLANT_DATABASE_SCHEMA
+
+# Add a deprecation note at the top of the test file
+import warnings
+warnings.warn(
+    "The tests for src.notion modules are deprecated and will be removed in a future version. "
+    "The src.notion package is being replaced by scripts/sync_to_notion_requests.py.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 def test_validate_database_schema():
     """Test validating a database schema."""

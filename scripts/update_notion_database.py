@@ -2,8 +2,8 @@
 """
 Script to update an existing Notion database schema.
 
-This script updates an existing Notion database with the schema defined in
-src/notion/schema.py.
+This script updates an existing Notion database with the proper schema for plant data.
+The schema definition is included directly in this script.
 """
 
 import os
@@ -19,7 +19,69 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src import config
-from src.notion.schema import get_database_creation_schema
+
+# Define the database schema for plant data
+# This was moved from src/notion/schema.py which is now deprecated
+PLANT_DATABASE_SCHEMA = {
+    "Name": {
+        "title": {}
+    },
+    "Botanical Name": {
+        "rich_text": {}
+    },
+    "Plant Type": {
+        "select": {}
+    },
+    "Sun Exposure": {
+        "multi_select": {}
+    },
+    "Soil pH": {
+        "select": {}
+    },
+    "Bloom Time": {
+        "multi_select": {}
+    },
+    "Flower Color": {
+        "multi_select": {}
+    },
+    "Hardiness Zone": {
+        "multi_select": {}
+    },
+    "Link": {
+        "url": {}
+    },
+    "Image URL": {
+        "url": {}
+    },
+    "Photo Credit": {
+        "rich_text": {}
+    },
+    "Planting": {
+        "rich_text": {}
+    },
+    "Growing": {
+        "rich_text": {}
+    },
+    "Harvesting": {
+        "rich_text": {}
+    },
+    "Wit and Wisdom": {
+        "rich_text": {}
+    },
+    "Cooking Notes": {
+        "rich_text": {}
+    }
+    # Note: Pests/Diseases and Recipes will be handled as tables in page content
+}
+
+def get_database_creation_schema():
+    """
+    Get the schema for creating a new database.
+    
+    Returns:
+        dict: Database schema for creation
+    """
+    return PLANT_DATABASE_SCHEMA
 
 # Disable SSL warnings
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
