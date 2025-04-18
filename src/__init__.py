@@ -1,0 +1,3 @@
+"""
+Plant Scraper package.
+"""
