@@ -3,7 +3,21 @@ Schema module for Notion database.
 
 This module defines the schema for the Notion database and provides
 functions for validating and creating the database schema.
+
+DEPRECATED: This module is deprecated and will be removed in a future version.
+Please use scripts/sync_to_notion_requests.py instead, which directly handles
+the Notion database schema.
 """
+
+import warnings
+
+# Emit a deprecation warning
+warnings.warn(
+    "The src.notion.schema module is deprecated and will be removed in a future version. "
+    "Please use scripts/sync_to_notion_requests.py instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 # Define the database schema for plant data
 PLANT_DATABASE_SCHEMA = {

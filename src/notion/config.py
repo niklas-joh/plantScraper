@@ -3,7 +3,21 @@ Configuration module for Notion integration.
 
 This module provides configuration settings for the Notion API integration,
 including API key and database ID handling.
+
+DEPRECATED: This module is deprecated and will be removed in a future version.
+Please use scripts/sync_to_notion_requests.py instead, which directly handles
+configuration through environment variables.
 """
+
+import warnings
+
+# Emit a deprecation warning
+warnings.warn(
+    "The src.notion.config module is deprecated and will be removed in a future version. "
+    "Please use scripts/sync_to_notion_requests.py instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 import os
 from pathlib import Path

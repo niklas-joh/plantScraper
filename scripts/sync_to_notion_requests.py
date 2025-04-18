@@ -320,6 +320,13 @@ def create_plant_content_blocks(plant):
             
             # Add content paragraph
             if isinstance(plant[section], dict) and "content" in plant[section] and plant[section]["content"]:
+                # Truncate content if it's too long (Notion has a 2000 character limit per text block)
+                content = plant[section]["content"]
+                max_length = 2000
+                
+                if len(content) > max_length:
+                    content = content[:max_length-3] + "..."
+                
                 blocks.append({
                     "object": "block",
                     "type": "paragraph",
@@ -328,7 +335,7 @@ def create_plant_content_blocks(plant):
                             {
                                 "type": "text",
                                 "text": {
-                                    "content": plant[section]["content"]
+                                    "content": content
                                 }
                             }
                         ]
@@ -352,6 +359,10 @@ def create_plant_content_blocks(plant):
                             ]
                         }
                     })
+                    
+                    # Truncate content if it's too long
+                    if len(content) > 2000:
+                        content = content[:1997] + "..."
                     
                     blocks.append({
                         "object": "block",
@@ -497,6 +508,11 @@ def create_plant_content_blocks(plant):
             }
         })
         
+        # Truncate content if it's too long
+        content = plant["Wit and Wisdom"]
+        if len(content) > 2000:
+            content = content[:1997] + "..."
+            
         blocks.append({
             "object": "block",
             "type": "paragraph",
@@ -505,7 +521,7 @@ def create_plant_content_blocks(plant):
                     {
                         "type": "text",
                         "text": {
-                            "content": plant["Wit and Wisdom"]
+                            "content": content
                         }
                     }
                 ]
@@ -529,6 +545,11 @@ def create_plant_content_blocks(plant):
             }
         })
         
+        # Truncate content if it's too long
+        content = plant["Cooking Notes"]
+        if len(content) > 2000:
+            content = content[:1997] + "..."
+            
         blocks.append({
             "object": "block",
             "type": "paragraph",
@@ -537,7 +558,7 @@ def create_plant_content_blocks(plant):
                     {
                         "type": "text",
                         "text": {
-                            "content": plant["Cooking Notes"]
+                            "content": content
                         }
                     }
                 ]
@@ -546,7 +567,97 @@ def create_plant_content_blocks(plant):
     
     return blocks
 
-def sync_plant_to_notion(api_key, database_id, plant):
+def get_existing_plants(api_key, database_id):
+    """
+    Get existing plants from the Notion database.
+    
+    Args:
+        api_key (str): Notion API key
+        database_id (str): Notion database ID
+        
+    Returns:
+        dict: Dictionary mapping plant names to page IDs
+    """
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+    
+    # Query the database
+    payload = {
+        "page_size": 100
+    }
+    
+    plant_page_map = {}
+    
+    try:
+        response = requests.post(
+            f"https://api.notion.com/v1/databases/{database_id}/query",
+            headers=headers,
+            json=payload,
+            verify=False
+        )
+        
+        response.raise_for_status()
+        results = response.json().get("results", [])
+        
+        # Extract plant names and page IDs
+        for page in results:
+            title_property = page["properties"].get("Name", {})
+            if "title" in title_property and title_property["title"]:
+                plant_name = title_property["title"][0]["text"]["content"]
+                plant_page_map[plant_name] = page["id"]
+                
+        return plant_page_map
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error querying database: {str(e)}")
+        return {}
+
+def update_notion_page(api_key, page_id, properties):
+    """
+    Update a Notion page.
+    
+    Args:
+        api_key (str): Notion API key
+        page_id (str): Page ID
+        properties (dict): Page properties
+        
+    Returns:
+        tuple: (success, error_message)
+    """
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+    
+    # Create payload
+    payload = {
+        "properties": properties
+    }
+    
+    try:
+        response = requests.patch(
+            f"https://api.notion.com/v1/pages/{page_id}",
+            headers=headers,
+            json=payload,
+            verify=False
+        )
+        
+        response.raise_for_status()
+        return True, ""
+    except requests.exceptions.RequestException as e:
+        error_message = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_data = e.response.json()
+                error_message = f"{error_message}: {json.dumps(error_data, indent=2)}"
+            except:
+                error_message = f"{error_message}: {e.response.text}"
+        return False, error_message
+
+def sync_plant_to_notion(api_key, database_id, plant, existing_plants=None):
     """
     Sync a plant to Notion.
     
@@ -554,6 +665,8 @@ def sync_plant_to_notion(api_key, database_id, plant):
         api_key (str): Notion API key
         database_id (str): Notion database ID
         plant (dict): Plant data
+        existing_plants (dict, optional): Dictionary mapping plant names to page IDs.
+            If not provided, will query the database. Defaults to None.
         
     Returns:
         tuple: (success, action, error_message)
@@ -564,38 +677,53 @@ def sync_plant_to_notion(api_key, database_id, plant):
         "Notion-Version": "2022-06-28"
     }
     
+    # Get existing plants if not provided
+    if existing_plants is None:
+        existing_plants = get_existing_plants(api_key, database_id)
+    
     # Transform plant data to Notion format
     properties = transform_plant_to_notion_properties(plant)
     children = create_plant_content_blocks(plant)
     
-    # Create page in Notion
-    payload = {
-        "parent": {
-            "database_id": database_id
-        },
-        "properties": properties,
-        "children": children
-    }
-    
-    try:
-        response = requests.post(
-            "https://api.notion.com/v1/pages",
-            headers=headers,
-            json=payload,
-            verify=False
-        )
+    # Check if plant already exists
+    if plant.get("Name") in existing_plants:
+        # Update existing page
+        page_id = existing_plants[plant["Name"]]
+        success, error_message = update_notion_page(api_key, page_id, properties)
         
-        response.raise_for_status()
-        return True, "created", ""
-    except requests.exceptions.RequestException as e:
-        error_message = str(e)
-        if hasattr(e, 'response') and e.response is not None:
-            try:
-                error_data = e.response.json()
-                error_message = f"{error_message}: {json.dumps(error_data, indent=2)}"
-            except:
-                error_message = f"{error_message}: {e.response.text}"
-        return False, "skipped", error_message
+        if success:
+            return True, "updated", ""
+        else:
+            return False, "skipped", error_message
+    else:
+        # Create new page
+        payload = {
+            "parent": {
+                "database_id": database_id
+            },
+            "properties": properties,
+            "children": children
+        }
+        
+        try:
+            response = requests.post(
+                "https://api.notion.com/v1/pages",
+                headers=headers,
+                json=payload,
+                verify=False
+            )
+            
+            response.raise_for_status()
+            return True, "created", ""
+        except requests.exceptions.RequestException as e:
+            error_message = str(e)
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_data = e.response.json()
+                    error_message = f"{error_message}: {json.dumps(error_data, indent=2)}"
+                except:
+                    error_message = f"{error_message}: {e.response.text}"
+            return False, "skipped", error_message
 
 def main():
     """Synchronize plants data to Notion database."""
@@ -610,6 +738,8 @@ def main():
     parser.add_argument("--plants-file", help="Path to plants JSON file", 
                         default=config.PLANTS_DETAILED_JSON)
     parser.add_argument("--limit", type=int, help="Limit the number of plants to sync")
+    parser.add_argument("--offset", type=int, help="Offset for plants to sync", default=0)
+    parser.add_argument("--count-only", action="store_true", help="Only count plants without syncing")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     
     args = parser.parse_args()
@@ -640,15 +770,28 @@ def main():
     logger.info(f"Loading plants data from {args.plants_file}")
     plants = load_plants_data(args.plants_file)
     
-    # Limit the number of plants if specified
+    # Apply offset and limit if specified
+    plants = plants[args.offset:]
     if args.limit:
         plants = plants[:args.limit]
+    
+    # If count-only flag is set, just print the count and exit
+    if args.count_only:
+        logger.info(f"Total plants in file: {len(plants) + args.offset}")
+        logger.info(f"Plants after offset {args.offset}: {len(plants)}")
+        return 0
+    
+    # Get existing plants
+    logger.info("Querying existing plants in Notion database...")
+    existing_plants = get_existing_plants(api_key, database_id)
+    logger.info(f"Found {len(existing_plants)} existing plants in the database")
     
     # Sync plants to Notion
     logger.info(f"Synchronizing {len(plants)} plants to Notion...")
     
     results = {
         "created": 0,
+        "updated": 0,
         "skipped": 0,
         "errors": []
     }
@@ -656,10 +799,13 @@ def main():
     for i, plant in enumerate(plants):
         logger.info(f"Syncing plant {i+1}/{len(plants)}: {plant.get('Name', 'unknown')}")
         
-        success, action, error_message = sync_plant_to_notion(api_key, database_id, plant)
+        success, action, error_message = sync_plant_to_notion(api_key, database_id, plant, existing_plants)
         
         if success:
-            results["created"] += 1
+            if action == "created":
+                results["created"] += 1
+            elif action == "updated":
+                results["updated"] += 1
         else:
             results["skipped"] += 1
             results["errors"].append({
@@ -673,6 +819,7 @@ def main():
     # Print results
     logger.info("Synchronization completed!")
     logger.info(f"Created: {results['created']}")
+    logger.info(f"Updated: {results['updated']}")
     logger.info(f"Skipped: {results['skipped']}")
     
     if results["errors"]:

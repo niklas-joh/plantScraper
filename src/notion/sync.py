@@ -3,7 +3,21 @@ Synchronization module for Notion integration.
 
 This module provides functions for synchronizing plant data between
 the plants_detailed.json file and a Notion database.
+
+DEPRECATED: This module is deprecated and will be removed in a future version.
+Please use scripts/sync_to_notion_requests.py instead, which now includes
+the ability to update existing plants.
 """
+
+import warnings
+
+# Emit a deprecation warning
+warnings.warn(
+    "The src.notion.sync module is deprecated and will be removed in a future version. "
+    "Please use scripts/sync_to_notion_requests.py instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 import json
 import os

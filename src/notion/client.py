@@ -3,7 +3,21 @@ Notion client module for interacting with the Notion API.
 
 This module provides a client class for interacting with the Notion API,
 including methods for retrieving, creating, and updating pages and databases.
+
+DEPRECATED: This module is deprecated and will be removed in a future version.
+Please use scripts/sync_to_notion_requests.py instead, which directly uses
+the requests library to interact with the Notion API.
 """
+
+import warnings
+
+# Emit a deprecation warning
+warnings.warn(
+    "The src.notion.client module is deprecated and will be removed in a future version. "
+    "Please use scripts/sync_to_notion_requests.py instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 import time
 import logging

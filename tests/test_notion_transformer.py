@@ -3,6 +3,9 @@ Tests for the Notion transformer module.
 
 This module contains tests for the transformer functions that convert
 plant data to Notion format.
+
+NOTE: The src.notion package is deprecated and will be removed in a future version.
+These tests are kept for backward compatibility during the transition period.
 """
 
 import pytest
@@ -14,6 +17,15 @@ from src.notion.transformer import (
     create_bulleted_list_item,
     create_table_block,
     create_plant_content_blocks
+)
+
+# Add a deprecation note at the top of the test file
+import warnings
+warnings.warn(
+    "The tests for src.notion modules are deprecated and will be removed in a future version. "
+    "The src.notion package is being replaced by scripts/sync_to_notion_requests.py.",
+    DeprecationWarning,
+    stacklevel=2
 )
 
 def test_transform_plant_to_notion_properties():

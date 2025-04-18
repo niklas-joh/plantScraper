@@ -3,7 +3,21 @@ Transformer module for converting plant data to Notion format.
 
 This module provides functions for transforming plant data from the
 plants_detailed.json format to Notion's API format for properties and content.
+
+DEPRECATED: This module is deprecated and will be removed in a future version.
+Please use scripts/sync_to_notion_requests.py instead, which includes its own
+transformation functions.
 """
+
+import warnings
+
+# Emit a deprecation warning
+warnings.warn(
+    "The src.notion.transformer module is deprecated and will be removed in a future version. "
+    "Please use scripts/sync_to_notion_requests.py instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 def transform_plant_to_notion_properties(plant):
     """

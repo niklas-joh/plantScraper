@@ -2,6 +2,8 @@
 
 This document outlines the technical details for integrating the plants_detailed.json data with a Notion database.
 
+> **IMPORTANT**: The `src/notion` package described in this document is deprecated and will be removed in a future version. Please use `scripts/sync_to_notion_requests.py` for Notion integration, which now includes all the functionality described here, including the ability to update existing plants instead of creating duplicates.
+
 ## Prerequisites
 
 - Notion account with admin access to create integrations
@@ -566,64 +568,80 @@ def sync_plants_to_notion(plants=None, client=None):
 
 ### Command-Line Script
 
-Create a script to run the synchronization:
+The recommended script for Notion synchronization is `scripts/sync_to_notion_requests.py`:
 
 ```python
-# scripts/sync_to_notion.py
+# scripts/sync_to_notion_requests.py
 
 #!/usr/bin/env python
 """
-Script to synchronize plants data to Notion database.
+Script to synchronize plants data to Notion database using requests.
+
+This script synchronizes plant data from the plants_detailed.json file
+to a Notion database, using the requests library directly.
 """
 
 import os
 import sys
+import json
+import time
 import argparse
+import logging
+import requests
 from pathlib import Path
+from dotenv import load_dotenv
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 # Add the project root to the Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.notion.sync import sync_plants_to_notion
-from src.notion.client import NotionClient
+from src import config
+
+# Disable SSL warnings
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# ... (implementation details) ...
 
 def main():
     """Synchronize plants data to Notion database."""
     
+    # Load environment variables from .env file
+    dotenv_path = Path(config.BASE_DIR) / '.env'
+    load_dotenv(dotenv_path)
+    
     parser = argparse.ArgumentParser(description="Synchronize plants data to Notion database")
     parser.add_argument("--api-key", help="Notion API key")
     parser.add_argument("--database-id", help="Notion database ID")
-    parser.add_argument("--plants-file", help="Path to plants JSON file")
+    parser.add_argument("--plants-file", help="Path to plants JSON file", 
+                        default=config.PLANTS_DETAILED_JSON)
+    parser.add_argument("--limit", type=int, help="Limit the number of plants to sync")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     
-    args = parser.parse_args()
-    
-    # Initialize client with command-line arguments
-    client = NotionClient(
-        api_key=args.api_key,
-        database_id=args.database_id
-    )
-    
-    # Run synchronization
-    print("Synchronizing plants data to Notion...")
-    results = sync_plants_to_notion(client=client)
-    
-    # Print results
-    print(f"Synchronization complete!")
-    print(f"Created: {results['created']}")
-    print(f"Updated: {results['updated']}")
-    print(f"Skipped: {results['skipped']}")
-    
-    if results["errors"]:
-        print(f"\nErrors occurred during synchronization:")
-        for error in results["errors"]:
-            print(f"- {error['plant']}: {error['error']}")
-        return 1
-    
-    return 0
+    # ... (implementation details) ...
 
 if __name__ == "__main__":
     sys.exit(main())
 ```
+
+To use this script:
+
+```bash
+python scripts/sync_to_notion_requests.py [--api-key API_KEY] [--database-id DATABASE_ID] [--plants-file PLANTS_FILE] [--limit LIMIT]
+```
+
+This script:
+1. Loads plant data from a JSON file
+2. Checks for existing plants in the Notion database
+3. Updates existing plants instead of creating duplicates
+4. Creates new plants when they don't already exist
+5. Handles rate limiting to avoid hitting Notion API limits
 
 ## Testing
 
