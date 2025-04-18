@@ -2,45 +2,28 @@
 
 A Python application for scraping plant information from [The Old Farmer's Almanac](https://www.almanac.com/gardening/growing-guides).
 
-## Project Structure
+## Project Overview
 
-```
-plantScraper/
-├── data/                  # Directory for storing scraped data
-├── docs/                  # Documentation
-├── output/                # Output directory for processed data
-├── scripts/               # Command-line scripts
-│   ├── comment_on_issue.py
-│   ├── run_scraper.py
-│   └── update_github_issue.py
-├── src/                   # Source code
-│   ├── config.py          # Centralized configuration
-│   ├── github/            # GitHub integration
-│   │   ├── create_issues.py
-│   │   ├── issue_manager.py
-│   │   ├── token_manager.py
-│   │   └── update_issue_secure.py
-│   ├── processors/        # Data processing modules
-│   │   └── content_cleaner.py
-│   ├── scraper/           # Scraper modules
-│   │   ├── base.py
-│   │   ├── plant_details.py
-│   │   └── plant_list.py
-│   └── utils/             # Utility modules
-│       ├── file_io.py
-│       └── http.py
-└── tests/                 # Test directory
-```
+This project scrapes detailed plant information from The Old Farmer's Almanac website, processes the data, and provides tools to sync it to a Notion database and manage related GitHub issues.
 
-## Features
+### Key Features
 
 - Scrape basic plant information (name, link, image URL)
 - Scrape detailed plant information (growing instructions, pests/diseases, etc.)
 - Preserve table formatting for pests/diseases section
 - Extract recipe links
-- Clean advertisement content
+- Clean advertisement content and filter user comments
 - GitHub integration for issue management
 - Notion integration for storing and sharing plant data
+
+## Documentation
+
+Comprehensive documentation is available in the `docs/project_guide` directory:
+
+- [Project Instructions](docs/project_guide/project_instructions.md) - Detailed guide to the project
+- [Quick Reference](docs/project_guide/quick_reference.md) - Concise overview for quick reference
+- [Code Examples](docs/project_guide/code_examples.md) - Practical code examples
+- [Troubleshooting Guide](docs/project_guide/troubleshooting_guide.md) - Solutions to common issues
 
 ## Installation
 
@@ -55,23 +38,17 @@ plantScraper/
    pip install -r requirements.txt
    ```
 
-## Usage
+3. Set up environment variables:
+   ```
+   cp .env.example .env
+   # Edit .env with your Notion API key, database ID, and GitHub info
+   ```
+
+## Quick Start
 
 ### Running the Scraper
 
-To run the scraper, use the `run_scraper.py` script:
-
-```
-python scripts/run_scraper.py [--type {list,details,all}] [--limit LIMIT] [--output-dir OUTPUT_DIR]
-```
-
-Options:
-- `--type`: Type of scraper to run (list, details, or all). Default is "all".
-- `--limit`: Limit the number of plants to scrape.
-- `--output-dir`: Output directory for scraped data.
-
-Examples:
-```
+```bash
 # Run both scrapers
 python scripts/run_scraper.py
 
@@ -80,76 +57,61 @@ python scripts/run_scraper.py --type list
 
 # Run only the details scraper with a limit of 5 plants
 python scripts/run_scraper.py --type details --limit 5
-
-# Specify a custom output directory
-python scripts/run_scraper.py --output-dir custom_output
 ```
 
-### GitHub Integration
+### Syncing to Notion
 
-#### Creating Issues
+```bash
+# Sync all plants to Notion
+python scripts/sync_to_notion_requests.py
 
-To create GitHub issues, use the `create_issues.py` module:
-
-```python
-from src.github.create_issues import create_issues
-
-# Create issues from a JSON file
-create_issues(json_file_path="path/to/issues.json")
-
-# Create default issues
-create_issues()
-```
-
-#### Commenting on Issues
-
-To comment on a GitHub issue, use the `comment_on_issue.py` script:
-
-```
-python scripts/comment_on_issue.py ISSUE_NUMBER [--file FILE] [--owner OWNER] [--repo REPO]
-```
-
-#### Updating Issues
-
-To update a GitHub issue, use the `update_github_issue.py` script:
-
-```
-python scripts/update_github_issue.py ISSUE_NUMBER {comment,update} [--file FILE] [--owner OWNER] [--repo REPO]
-```
-
-### Notion Integration
-
-To sync plant data to a Notion database, use the `sync_to_notion_requests.py` script:
-
-```
-python scripts/sync_to_notion_requests.py [--api-key API_KEY] [--database-id DATABASE_ID] [--plants-file PLANTS_FILE] [--limit LIMIT]
-```
-
-Options:
-- `--api-key`: Override the Notion API key from environment variable
-- `--database-id`: Override the Notion database ID from environment variable
-- `--plants-file`: Specify a custom path to the plants JSON file
-- `--limit`: Limit the number of plants to sync
-
-Example:
-```
-# Sync 10 plants to Notion
+# Sync a limited number of plants
 python scripts/sync_to_notion_requests.py --limit 10
 ```
 
-For detailed instructions on setting up the Notion integration, see [Notion Integration Documentation](docs/notion_integration_readme.md).
+## Project Structure
 
-## Configuration
+```
+plantScraper/
+├── data/                  # Directory for storing scraped data
+├── docs/                  # Documentation
+│   └── project_guide/     # Comprehensive project documentation
+├── output/                # Output directory for processed data
+├── scripts/               # Command-line scripts
+├── src/                   # Source code
+│   ├── config.py          # Centralized configuration
+│   ├── github/            # GitHub integration
+│   ├── notion/            # Notion integration
+│   ├── processors/        # Data processing modules
+│   ├── scraper/           # Scraper modules
+│   └── utils/             # Utility modules
+└── tests/                 # Test directory
+```
 
-Configuration settings are centralized in `src/config.py`. You can modify this file to change:
+For a more detailed explanation of the project structure, see the [Project Instructions](docs/project_guide/project_instructions.md).
 
-- Base URLs for scraping
-- HTTP headers
-- Request timeout and delay
-- GitHub repository information
-- File paths for data storage
+## Common Issues
+
+- **Bell Peppers "Wit and Wisdom" Issue**: The "Wit and Wisdom" field for Bell Peppers is stored as a dictionary in the `plants_detailed.json` file, while the Notion API expects a string.
+
+- **Cooking Notes User Comments**: The "Cooking Notes" field may contain user comments that should be filtered out. The `filter_user_comments_from_cooking_notes()` function in `content_cleaner.py` handles this.
+
+For more troubleshooting information, see the [Troubleshooting Guide](docs/project_guide/troubleshooting_guide.md).
 
 ## Development
+
+### GitHub Workflow Guidelines
+
+When working on this project:
+
+- Always create a new branch when working on an issue from GitHub
+- Include detailed git commit messages that reference issue numbers
+- Close issues when they are resolved
+- Keep files and folders clean and organized
+- Create simple solutions and avoid over-engineering
+- Follow the KISS (Keep It Simple, Stupid) approach
+
+For more detailed guidelines, see the [Project Instructions](docs/project_guide/project_instructions.md#github-workflow-guidelines).
 
 ### Adding a New Scraper
 
@@ -159,27 +121,7 @@ To add a new scraper:
 2. Extend the `BaseScraper` class
 3. Implement the `scrape` and `process_data` methods
 
-Example:
-```python
-from src.scraper.base import BaseScraper
-
-class MyNewScraper(BaseScraper):
-    def scrape(self, url):
-        # Implementation
-        pass
-        
-    def process_data(self, data):
-        # Implementation
-        pass
-```
-
-### Testing
-
-Run tests using pytest:
-
-```
-pytest
-```
+For code examples, see the [Code Examples](docs/project_guide/code_examples.md) document.
 
 ## License
 
