@@ -126,6 +126,32 @@ def main():
         "labels": ["enhancement"]
     }
     
+    # Issue 3: Advertisement Text Removal
+    ad_removal_issue = {
+        "title": "Bug: Advertisement Text Showing in Cooking Notes Section",
+        "body": """Currently, advertisement text is showing up in the Cooking Notes section despite our code to remove it. This bug fix will:
+
+1. Problem Description:
+   - Advertisement text with markers like "ADVERTISEMENT" and "Advertisement" appears in the Cooking Notes section
+   - The clean_advertisement_content() function exists but is not being properly applied to all content
+
+2. Technical Implementation:
+   - Enhance the clean_advertisement_content() function to handle multiple occurrences of advertisement text
+   - Apply the function consistently to all content, especially in the Cooking Notes section
+   - Handle different variations of advertisement text (e.g., "ADVERTISEMENT", "Advertisement")
+
+3. Expected Outcome:
+   - All advertisement text is removed from the final JSON output
+   - Content before advertisements is preserved
+   - Multiple occurrences of advertisements in the same content are all removed
+
+4. Acceptance Criteria:
+   - No "ADVERTISEMENT" text appears in any section of the JSON output
+   - Content quality and readability is maintained
+   - The solution is robust against different advertisement text variations""",
+        "labels": ["bug"]
+    }
+    
     try:
         # Create Recipe Links issue
         recipe_response = create_github_issue(
@@ -145,10 +171,19 @@ def main():
         )
         print(f"Created Table Formatting issue #{table_response['number']}")
         
+        # Create Advertisement Text Removal issue
+        ad_removal_response = create_github_issue(
+            token, owner, repo,
+            ad_removal_issue["title"],
+            ad_removal_issue["body"],
+            ad_removal_issue["labels"]
+        )
+        print(f"Created Advertisement Text Removal issue #{ad_removal_response['number']}")
+        
     except requests.exceptions.RequestException as e:
         print(f"Error creating issues: {e}")
         if hasattr(e, 'response'):
             print(f"Response: {e.response.text}")
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -226,11 +226,41 @@ def process_field_with_subheadings(field_item, current_label):
 
 def clean_advertisement_content(content):
     """Remove ADVERTISEMENT text from content."""
-    if isinstance(content, str) and "ADVERTISEMENT" in content:
-        ad_index = content.find("ADVERTISEMENT")
-        if ad_index > 0:
-            return content[:ad_index].strip()
-    return content
+    if not isinstance(content, str):
+        return content
+        
+    # Handle variations of advertisement text
+    ad_texts = ["ADVERTISEMENT", "Advertisement"]
+    
+    # First check if any ad text exists in the content
+    has_ad = any(ad_text in content for ad_text in ad_texts)
+    if not has_ad:
+        return content
+    
+    # Split content by lines to handle multiple ad occurrences
+    lines = content.split('\n')
+    cleaned_lines = []
+    
+    for line in lines:
+        # Skip lines that contain only advertisement text
+        if any(line.strip() == ad_text for ad_text in ad_texts):
+            continue
+            
+        # For lines that contain ad text mixed with content, truncate at the ad text
+        ad_found = False
+        for ad_text in ad_texts:
+            if ad_text in line:
+                ad_index = line.find(ad_text)
+                if ad_index > 0:
+                    cleaned_lines.append(line[:ad_index].strip())
+                ad_found = True
+                break
+        
+        # If no ad text in this line, keep it
+        if not ad_found:
+            cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines).strip()
 
 def process_plant_data(plant_data):
     processed_data = {}
@@ -289,6 +319,16 @@ def process_plant_data(plant_data):
                 else:
                     if cleaned_content:
                         field_content = cleaned_content
+        
+        # Clean advertisement content for all fields, especially Cooking Notes
+        if isinstance(field_content, str):
+            field_content = clean_advertisement_content(field_content)
+        
+        # Also clean advertisement content from all sub-headings
+        if sub_headings:
+            for heading, content in sub_headings.items():
+                if isinstance(content, str):
+                    sub_headings[heading] = clean_advertisement_content(content)
         
         print(f"  Content type for {field_name}: {type(field_content)}")
         print(f"  Content length: {len(field_content) if field_content else 0}")
@@ -390,6 +430,16 @@ def scrape_plant(row, index, total_count, headers):
                         else:
                             field_content += "\n" + content
             
+            # Clean advertisement content before storing
+            if isinstance(field_content, str):
+                field_content = clean_advertisement_content(field_content)
+            
+            # Also clean advertisement content from all sub-headings
+            if sub_headings:
+                for heading, content in sub_headings.items():
+                    if isinstance(content, str):
+                        sub_headings[heading] = clean_advertisement_content(content)
+            
             # Store the processed content
             if sub_headings:
                 plant_data[field_name] = {
@@ -426,7 +476,7 @@ def main():
     os.makedirs("output", exist_ok=True)
     
     try:
-        for index, row in df.iterrows():
+        for index, row in df.head(1).iterrows():
             try:
                 plant_data = scrape_plant(row, index, total_count, headers)
                 if plant_data:
