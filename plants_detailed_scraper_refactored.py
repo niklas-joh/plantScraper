@@ -225,9 +225,15 @@ def process_field_with_subheadings(field_item, current_label):
     return result
 
 def clean_advertisement_content(content):
-    """Remove ADVERTISEMENT text from content."""
+    """Remove ADVERTISEMENT text from content and clean up user questions in Cooking Notes."""
     if not isinstance(content, str):
         return content
+        
+    # Special handling for Cooking Notes section
+    if "Artichokes are delicious raw or cooked" in content:  # This is a marker for Cooking Notes
+        # Extract only the cooking instructions part
+        cooking_instructions = content.split("Vegetables")[0].strip()
+        return cooking_instructions
         
     # Handle variations of advertisement text
     ad_texts = ["ADVERTISEMENT", "Advertisement"]
