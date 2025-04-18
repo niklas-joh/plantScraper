@@ -9,6 +9,12 @@ output/
 # IDE settings
 .vscode/
 
+# Environment variables
+.env
+
+# Project specific
+Cline/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -29,4 +35,4 @@ var/
 wheels/
 *.egg-info/
 .installed.cfg
-*.egg 
+*.egg
